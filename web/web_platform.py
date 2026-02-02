@@ -1,6 +1,6 @@
 """
-Web Interface for Quantitative Trading Platform
-Based on mature trading platforms: TradingView, QuantConnect, Quantopian
+Stable Web Interface for Quantitative Trading Platform
+Using direct app reference to ensure component access
 """
 
 from flask import Flask, render_template, jsonify, request
@@ -36,12 +36,8 @@ class TradingPlatformWeb:
         self.app = Flask(__name__)
         CORS(self.app)
         
-        # Initialize components
-        self.okx_adapter = None
-        self.position_manager = None
-        self.order_manager = None
-        self.execution_engine = None
-        self.risk_monitor = None
+        # Initialize components at class level
+        self._initialize_components()
         
         # Configure routes
         self._configure_routes()
@@ -51,6 +47,37 @@ class TradingPlatformWeb:
         print("  - TradingView: 图表可视化")
         print("  - QuantConnect: 策略管理")
         print("  - Quantopian: 回测分析")
+    
+    def _initialize_components(self):
+        """Initialize all platform components"""
+        # Initialize OKX adapter
+        okx_config = {
+            "name": "OKX",
+            "type": "crypto_okx",
+            "credentials": {
+                "api_key": "da7e47af-4bb0-400d-b01c-3aa299279629",
+                "secret_key": "9237CEEF04C1501D7BA4BFCCBB65200",
+                "passphrase": "5683@Sjtu"
+            },
+            "settings": {
+                "exchange": "okx",
+                "testnet": True
+            }
+        }
+        
+        self.okx_adapter = OKXAdapter(okx_config)
+        self.position_manager = PositionManager(initial_capital=100000.0)
+        
+        # Initialize risk management
+        risk_rules = RiskRulesEngine()
+        risk_rules.create_default_rules()
+        self.risk_monitor = RiskMonitor(self.position_manager, risk_rules)
+        
+        # Initialize order management
+        self.order_manager = OrderManager()
+        self.execution_engine = ExecutionEngine()
+        
+        print("✓ 所有组件初始化完成")
     
     def _configure_routes(self):
         """Configure all API routes"""
@@ -142,6 +169,9 @@ class TradingPlatformWeb:
                 strategy = data.get('strategy', 'dual_ma')
                 params = data.get('params', {})
                 
+                if not self.okx_adapter:
+                    return jsonify({'error': 'Data adapter not initialized'}), 500
+                
                 # Get market data
                 historical_data = asyncio.run(self.okx_adapter.get_historical_data(
                     symbol, '1H', 200
@@ -197,7 +227,7 @@ class TradingPlatformWeb:
                 if results:
                     analyzer = PerformanceAnalyzer(engine.cerebro, engine.results)
                     summary = analyzer.get_summary()
-                    
+
                     return jsonify({
                         'success': True,
                         'summary': {
@@ -322,6 +352,9 @@ class TradingPlatformWeb:
                 if not self.order_manager:
                     return jsonify({'error': 'Order manager not initialized'}), 500
                 
+                if not self.okx_adapter:
+                    return jsonify({'error': 'Data adapter not initialized'}), 500
+                
                 # Create order
                 from trading import OrderType, OrderSide
                 
@@ -377,6 +410,9 @@ class TradingPlatformWeb:
             try:
                 symbol = request.args.get('symbol', 'BTC-USDT')
                 
+                if not self.okx_adapter:
+                    return jsonify({'error': 'Data adapter not initialized'}), 500
+                
                 # Get recent data
                 historical_data = asyncio.run(self.okx_adapter.get_historical_data(
                     symbol, '1H', 50
@@ -397,47 +433,17 @@ class TradingPlatformWeb:
                 
                 latest = df.iloc[-1]
                 
-                # Generate signals
-                signals = []
-                
-                # SMA crossover signal
-                if latest['sma_10'] > latest['sma_30']:
-                    signals.append({
-                        'type': 'SMA_CROSS',
-                        'action': 'BUY',
-                        'strength': 'STRONG' if df['sma_10'].iloc[-2] <= df['sma_30'].iloc[-2] else 'HOLDING'
-                    })
-                elif latest['sma_10'] < latest['sma_30']:
-                    signals.append({
-                        'type': 'SMA_CROSS',
-                        'action': 'SELL',
-                        'strength': 'STRONG' if df['sma_10'].iloc[-2] >= df['sma_30'].iloc[-2] else 'HOLDING'
-                    })
-                
-                # RSI signal
-                if latest['rsi'] < 30:
-                    signals.append({
-                        'type': 'RSI',
-                        'action': 'BUY',
-                        'strength': 'OVERSOLD'
-                    })
-                elif latest['rsi'] > 70:
-                    signals.append({
-                        'type': 'RSI',
-                        'action': 'SELL',
-                        'strength': 'OVERBOUGHT'
-                    })
-                
-                return jsonify({
+                signals = {
                     'symbol': symbol,
                     'current_price': latest['close'],
-                    'signals': signals,
-                    'indicators': {
-                        'sma_10': latest['sma_10'],
-                        'sma_30': latest['sma_30'],
-                        'rsi': latest['rsi']
-                    }
-                })
+                    'sma_10': latest['sma_10'],
+                    'sma_30': latest['sma_30'],
+                    'rsi': latest['rsi'],
+                    'signal': self._generate_signal(latest['sma_10'], latest['sma_30'], latest['rsi']),
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+                return jsonify(signals)
                 
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
@@ -447,42 +453,18 @@ class TradingPlatformWeb:
         delta = prices.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        
         return rsi
     
-    def initialize_components(self):
-        """Initialize all platform components"""
-        # Initialize OKX adapter
-        okx_config = {
-            "name": "OKX",
-            "type": "crypto_okx",
-            "credentials": {
-                "api_key": "da7e47af-4bb0-400d-b01c-3aa299279629",
-                "secret_key": "9237CEEF04C1501D7BA4BFCCBB65200",
-                "passphrase": "5683@Sjtu"
-            },
-            "settings": {
-                "exchange": "okx",
-                "testnet": True
-            }
-        }
-        
-        self.okx_adapter = OKXAdapter(okx_config)
-        
-        # Initialize risk management
-        self.position_manager = PositionManager(initial_capital=100000.0)
-        risk_rules = RiskRulesEngine()
-        risk_rules.create_default_rules()
-        self.risk_monitor = RiskMonitor(self.position_manager, risk_rules)
-        
-        # Initialize order management
-        self.order_manager = OrderManager()
-        self.execution_engine = ExecutionEngine()
-        
-        print("✓ 所有组件初始化完成")
+    def _generate_signal(self, sma_10, sma_30, rsi):
+        """Generate trading signal based on indicators"""
+        if sma_10 > sma_30 and rsi < 70:
+            return 'BUY'
+        elif sma_10 < sma_30 and rsi > 30:
+            return 'SELL'
+        else:
+            return 'HOLD'
     
     def run(self):
         """Run the web server"""
@@ -493,14 +475,13 @@ class TradingPlatformWeb:
         print(f"  API端点: http://0.0.0.0:{self.port}/api")
         print("=" * 60)
         
-        self.app.run(host=self.host, port=self.port, debug=True)
+        self.app.run(host=self.host, port=self.port, debug=False, threaded=False)
 
 
 # Factory function
 def create_web_platform():
     """Create and configure web platform instance"""
     platform = TradingPlatformWeb()
-    platform.initialize_components()
     return platform
 
 
