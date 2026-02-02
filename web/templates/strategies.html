@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略管理 - 量化交易平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>量化交易平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/strategies">
+                            <i class="fas fa-brain me-1"></i> 策略管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtest">
+                            <i class="fas fa-vial me-1"></i> 回测分析
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk">
+                            <i class="fas fa-shield-alt me-1"></i> 风控系统
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/orders">
+                            <i class="fas fa-exchange-alt me-1"></i> 订单管理
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-plus-circle me-2"></i>创建策略
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">策略名称</label>
+                            <input type="text" class="form-control" id="strategyName" placeholder="输入策略名称">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">策略类型</label>
+                            <select class="form-select" id="strategyType">
+                                <option value="dual_ma">双均线策略</option>
+                                <option value="macd">MACD策略</option>
+                                <option value="rsi">RSI策略</option>
+                                <option value="bollinger">布林带策略</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="createStrategy()">
+                            <i class="fas fa-save me-2"></i>保存策略
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-list me-2"></i>策略列表</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshStrategies()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="analyzeAll()">
+                                <i class="fas fa-play me-1"></i>批量分析
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>策略名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>最近收益</th>
+                                        <th>夏普比率</th>
+                                        <th>最大回撤</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="strategiesTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">加载中...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Strategy Modal -->
+    <div class="modal fade" id="editStrategyModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">编辑策略</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">策略代码</label>
+                                <textarea class="form-control" id="strategyCode" rows="20" 
+                                    placeholder="在此处编写策略代码..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <i class="fas fa-sliders-h me-2"></i>参数配置
+                                </div>
+                                <div class="card-body">
+                                    <div id="strategyParams">
+                                        <!-- Parameters will be loaded dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="fas fa-chart-bar me-2"></i>回测预览
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="previewChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStrategy()">保存策略</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Strategy management functions
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStrategies();
+        });
+
+        async function loadStrategies() {
+            try {
+                // Mock data for demonstration
+                const strategies = [
+                    {
+                        id: 1,
+                        name: '双均线策略',
+                        type: 'Dual MA',
+                        status: 'active',
+                        recentReturn: '2.34%',
+                        sharpe: '1.25',
+                        maxDrawdown: '-1.2%'
+                    },
+                    {
+                        id: 2,
+                        name: 'MACD策略',
+                        type: 'MACD',
+                        status: 'active',
+                        recentReturn: '1.87%',
+                        sharpe: '0.98',
+                        maxDrawdown: '-0.8%'
+                    },
+                    {
+                        id: 3,
+                        name: 'RSI超买超卖',
+                        type: 'RSI',
+                        status: 'inactive',
+                        recentReturn: '-0.45%',
+                        sharpe: '-0.23',
+                        maxDrawdown: '-2.1%'
+                    }
+                ];
+
+                const tbody = document.getElementById('strategiesTableBody');
+                tbody.innerHTML = '';
+
+                strategies.forEach(strategy => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${strategy.name}</td>
+                        <td>${strategy.type}</td>
+                        <td>
+                            <span class="badge bg-${strategy.status === 'active' ? 'success' : 'secondary'}">
+                                ${strategy.status === 'active' ? '运行中' : '已停止'}
+                            </span>
+                        </td>
+                        <td class="${parseFloat(strategy.recentReturn) >= 0 ? 'text-success' : 'text-danger'}">
+                            ${strategy.recentReturn}
+                        </td>
+                        <td>${strategy.sharpe}</td>
+                        <td class="text-danger">${strategy.maxDrawdown}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                onclick="editStrategy(${strategy.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success me-1" 
+                                onclick="backtestStrategy(${strategy.id})">
+                                <i class="fas fa-vial"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning me-1" 
+                                onclick="toggleStrategy(${strategy.id})">
+                                <i class="fas ${strategy.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Error loading strategies:', error);
+            }
+        }
+
+        function editStrategy(id) {
+            // Load strategy details and open modal
+            document.getElementById('strategyCode').value = `# 示例策略代码
+def strategy_logic(data):
+    # 计算技术指标
+    sma_short = data.close.rolling(10).mean()
+    sma_long = data.close.rolling(30).mean()
+    
+    # 生成信号
+    if sma_short.iloc[-1] > sma_long.iloc[-1]:
+        return 'BUY'
+    else:
+        return 'SELL'`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('editStrategyModal'));
+            modal.show();
+        }
+
+        function createStrategy() {
+            const name = document.getElementById('strategyName').value;
+            const type = document.getElementById('strategyType').value;
+            
+            if (!name) {
+                alert('请输入策略名称');
+                return;
+            }
+            
+            alert(`策略 "${name}" 创建成功！`);
+            document.getElementById('strategyName').value = '';
+            loadStrategies();
+        }
+
+        function saveStrategy() {
+            alert('策略保存成功！');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editStrategyModal'));
+            modal.hide();
+            loadStrategies();
+        }
+
+        function backtestStrategy(id) {
+            alert(`开始回测策略 ID: ${id}`);
+        }
+
+        function toggleStrategy(id) {
+            alert(`切换策略状态 ID: ${id}`);
+        }
+
+        function refreshStrategies() {
+            loadStrategies();
+        }
+
+        function analyzeAll() {
+            alert('开始批量分析所有策略...');
+        }
+    </script>
+</body>
+</html>

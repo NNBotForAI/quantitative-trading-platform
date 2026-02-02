@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化交易平台 - Quantitative Trading Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar (Inspired by TradingView) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>量化交易平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/strategies">
+                            <i class="fas fa-brain me-1"></i> 策略管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtest">
+                            <i class="fas fa-vial me-1"></i> 回测分析
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk">
+                            <i class="fas fa-shield-alt me-1"></i> 风控系统
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/orders">
+                            <i class="fas fa-exchange-alt me-1"></i> 订单管理
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2">系统状态: 正常</span>
+                    <span class="text-light" id="currentTime"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Left Panel: Market Data and Signals -->
+            <div class="col-md-3">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-chart-area me-2"></i>市场数据
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">选择资产</label>
+                            <select class="form-select" id="symbolSelect" onchange="loadMarketData()">
+                                <option value="BTC-USDT">BTC-USDT</option>
+                                <option value="ETH-USDT">ETH-USDT</option>
+                                <option value="AAPL">AAPL (Alpaca)</option>
+                                <option value="GOOGL">GOOGL (Alpaca)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">时间周期</label>
+                            <select class="form-select" id="timeframeSelect" onchange="loadMarketData()">
+                                <option value="1H">1小时</option>
+                                <option value="4H">4小时</option>
+                                <option value="1D">1天</option>
+                            </select>
+                        </div>
+                        <div id="marketDataDisplay" class="text-center">
+                            <p class="text-muted">加载市场数据...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Signals -->
+                <div class="card">
+                    <div class="card-header bg-warning">
+                        <i class="fas fa-bolt me-2"></i>交易信号
+                    </div>
+                    <div class="card-body">
+                        <div id="signalsDisplay">
+                            <p class="text-muted">分析信号...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel: Chart and Analysis -->
+            <div class="col-md-6">
+                <!-- Price Chart (TradingView-style) -->
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white">
+                        <i class="fas fa-chart-line me-2"></i>价格图表
+                        <div class="btn-group btn-group-sm float-end">
+                            <button class="btn btn-light" onclick="toggleIndicator('sma')">SMA</button>
+                            <button class="btn btn-light" onclick="toggleIndicator('rsi')">RSI</button>
+                            <button class="btn btn-light" onclick="toggleIndicator('macd')">MACD</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="priceChart" style="height: 400px;"></canvas>
+                    </div>
+                </div>
+
+                <!-- Technical Indicators -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-calculator me-2"></i>技术指标
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>SMA (10)</h6>
+                                    <div id="sma10Value" class="h4 text-primary">--</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>SMA (30)</h6>
+                                    <div id="sma30Value" class="h4 text-warning">--</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>RSI (14)</h6>
+                                    <div id="rsiValue" class="h4 text-info">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Portfolio and Risk -->
+            <div class="col-md-3">
+                <!-- Portfolio Summary -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-wallet me-2"></i>投资组合
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>初始资本</span>
+                                <span id="initialCapital" class="fw-bold">$100,000.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>当前价值</span>
+                                <span id="currentValue" class="fw-bold">$100,000.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>总盈亏</span>
+                                <span id="totalPnl" class="fw-bold">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>收益率</span>
+                                <span id="returnPercent" class="fw-bold">0.00%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Status -->
+                <div class="card mb-3">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fas fa-exclamation-triangle me-2"></i>风险状态
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>风险比例</span>
+                                <span id="riskPercent">0.00%</span>
+                            </div>
+                            <div class="progress mt-1">
+                                <div id="riskProgressBar" class="progress-bar bg-success" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>敞口比例</span>
+                                <span id="exposurePercent">0.00%</span>
+                            </div>
+                            <div class="progress mt-1">
+                                <div id="exposureProgressBar" class="progress-bar bg-warning" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex justify-content-between">
+                                <span>24h告警</span>
+                                <span id="alert24h" class="badge bg-success">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-rocket me-2"></i>快速操作
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary w-100 mb-2" onclick="openBuyModal()">
+                            <i class="fas fa-arrow-up me-2"></i>买入
+                        </button>
+                        <button class="btn btn-danger w-100 mb-2" onclick="openSellModal()">
+                            <i class="fas fa-arrow-down me-2"></i>卖出
+                        </button>
+                        <button class="btn btn-info w-100 mb-2" onclick="loadMarketData()">
+                            <i class="fas fa-sync-alt me-2"></i>刷新数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-4 py-3 bg-light text-center">
+        <div class="container">
+            <p class="mb-0 text-muted">
+                量化交易平台 v1.0 | 基于Backtrader & QuantConnect架构 | 
+                <a href="/api/health">API健康检查</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <!-- Buy Modal -->
+    <div class="modal fade" id="buyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">买入订单</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="buyOrderForm">
+                        <div class="mb-3">
+                            <label class="form-label">资产</label>
+                            <input type="text" class="form-control" id="buySymbol" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">数量</label>
+                            <input type="number" class="form-control" id="buyQuantity" step="0.0001" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">执行策略</label>
+                            <select class="form-select" id="buyExecutionStrategy">
+                                <option value="TWAP">TWAP (时间加权)</option>
+                                <option value="VWAP">VWAP (成交量加权)</option>
+                                <option value="MIN_SLIPPAGE">Min Slippage (最小滑点)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">预估金额</label>
+                            <input type="text" class="form-control" id="buyEstimate" readonly>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" onclick="submitBuyOrder()">确认买入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sell Modal -->
+    <div class="modal fade" id="sellModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">卖出订单</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="sellOrderForm">
+                        <div class="mb-3">
+                            <label class="form-label">资产</label>
+                            <input type="text" class="form-control" id="sellSymbol" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">数量</label>
+                            <input type="number" class="form-control" id="sellQuantity" step="0.0001" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">执行策略</label>
+                            <select class="form-select" id="sellExecutionStrategy">
+                                <option value="TWAP">TWAP (时间加权)</option>
+                                <option value="VWAP">VWAP (成交量加权)</option>
+                                <option value="MIN_SLIPPAGE">Min Slippage (最小滑点)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">预估金额</label>
+                            <input type="text" class="form-control" id="sellEstimate" readonly>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="submitSellOrder()">确认卖出</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

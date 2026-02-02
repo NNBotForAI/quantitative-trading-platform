@@ -1,0 +1,342 @@
+/* Quantitative Trading Platform CSS Styles */
+/* Inspired by TradingView and professional trading platforms */
+
+:root {
+    --primary-color: #007bff;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --dark-color: #343a40;
+    --light-color: #f8f9fa;
+    --border-color: #dee2e6;
+    --chart-color: #007bff;
+    --grid-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Navigation Bar */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.nav-link {
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    font-weight: 600;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* Buttons */
+.btn {
+    transition: all 0.3s ease;
+    border-radius: 6px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Forms */
+.form-control,
+.form-select {
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Progress Bars */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--border-color);
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Alerts */
+.alert {
+    border-radius: 6px;
+    border: none;
+}
+
+.alert-dismissible .btn-close {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Badges */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+/* Tables */
+.table {
+    background-color: white;
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    background-color: var(--light-color);
+}
+
+.table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+    background-color: var(--light-color);
+}
+
+/* Chart Container */
+#priceChart {
+    width: 100% !important;
+    height: 400px !important;
+}
+
+/* Modal */
+.modal {
+    z-index: 1050;
+}
+
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.modal-footer {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Loading Spinner */
+.spinner-border {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--light-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-color);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    #priceChart {
+        height: 300px !important;
+    }
+}
+
+/* Utility Classes */
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.font-weight-bold {
+    font-weight: 700;
+}
+
+.shadow-sm {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-md {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-lg {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Color Themes */
+.bg-primary-light {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.bg-success-light {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+}
+
+.bg-warning-light {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: var(--warning-color);
+}
+
+.bg-danger-light {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+.status-success {
+    background-color: var(--success-color);
+}
+
+.status-warning {
+    background-color: var(--warning-color);
+}
+
+.status-danger {
+    background-color: var(--danger-color);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Footer */
+footer {
+    border-top: 1px solid var(--border-color);
+    background-color: var(--light-color);
+}
+
+/* Trade Actions */
+.trade-action {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.trade-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.trade-buy {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.trade-sell {
+    background-color: var(--danger-color);
+    color: white;
+}

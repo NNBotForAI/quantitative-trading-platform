@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理 - 量化交易平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>量化交易平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/strategies">
+                            <i class="fas fa-brain me-1"></i> 策略管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtest">
+                            <i class="fas fa-vial me-1"></i> 回测分析
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk">
+                            <i class="fas fa-shield-alt me-1"></i> 风控系统
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/orders">
+                            <i class="fas fa-exchange-alt me-1"></i> 订单管理
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Order Entry Panel -->
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-plus-circle me-2"></i>新建订单
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">交易资产</label>
+                            <select class="form-select" id="orderSymbol">
+                                <option value="BTC-USDT">BTC-USDT</option>
+                                <option value="ETH-USDT">ETH-USDT</option>
+                                <option value="AAPL">AAPL (Alpaca)</option>
+                                <option value="GOOGL">GOOGL (Alpaca)</option>
+                                <option value="MSFT">MSFT (Alpaca)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">交易方向</label>
+                                <select class="form-select" id="orderSide">
+                                    <option value="buy">买入</option>
+                                    <option value="sell">卖出</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">订单类型</label>
+                                <select class="form-select" id="orderType">
+                                    <option value="market">市价单</option>
+                                    <option value="limit">限价单</option>
+                                    <option value="stop">止损单</option>
+                                    <option value="stop_limit">止损限价单</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">数量</label>
+                            <input type="number" class="form-control" id="orderQuantity" 
+                                placeholder="输入数量" step="0.0001">
+                        </div>
+                        
+                        <div class="mb-3 d-none" id="limitPriceGroup">
+                            <label class="form-label">限价</label>
+                            <input type="number" class="form-control" id="orderLimitPrice" 
+                                placeholder="输入限价" step="0.01">
+                        </div>
+                        
+                        <div class="mb-3 d-none" id="stopPriceGroup">
+                            <label class="form-label">触发价</label>
+                            <input type="number" class="form-control" id="orderStopPrice" 
+                                placeholder="输入触发价" step="0.01">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">执行策略</label>
+                            <select class="form-select" id="executionStrategy">
+                                <option value="MARKET">市价执行</option>
+                                <option value="TWAP">TWAP (时间加权)</option>
+                                <option value="VWAP">VWAP (成交量加权)</option>
+                                <option value="MIN_SLIPPAGE">最小滑点</option>
+                                <option value="ICEBERG">冰山订单</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">有效时间</label>
+                            <select class="form-select" id="timeInForce">
+                                <option value="GTC">长期有效(GTC)</option>
+                                <option value="IOC">立即成交(IOC)</option>
+                                <option value="FOK">全部成交(FOK)</option>
+                                <option value="DAY">当日有效(DAY)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="placeOrder()" id="buyBtn">
+                                <i class="fas fa-arrow-up me-2"></i>买入
+                            </button>
+                            <button class="btn btn-danger" onclick="placeOrder()" id="sellBtn">
+                                <i class="fas fa-arrow-down me-2"></i>卖出
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Preview -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-eye me-2"></i>订单预览
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <small class="text-muted">资产</small>
+                            <div id="previewSymbol" class="fw-bold">BTC-USDT</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">方向</small>
+                            <div id="previewSide" class="fw-bold text-success">买入</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">类型</small>
+                            <div id="previewType" class="fw-bold">市价单</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">数量</small>
+                            <div id="previewQuantity" class="fw-bold">0.0000</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">预估金额</small>
+                            <div id="previewAmount" class="fw-bold">$0.00</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">费用</small>
+                            <div id="previewFee" class="fw-bold">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Panel -->
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-list me-2"></i>订单列表</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshOrders()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="filterOrders()">
+                                <i class="fas fa-filter"></i> 筛选
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <label class="form-label">状态筛选</label>
+                                <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
+                                    <option value="">全部状态</option>
+                                    <option value="new">新建</option>
+                                    <option value="partially_filled">部分成交</option>
+                                    <option value="filled">完全成交</option>
+                                    <option value="cancelled">已取消</option>
+                                    <option value="rejected">已拒绝</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">资产筛选</label>
+                                <select class="form-select form-select-sm" id="symbolFilter" onchange="applyFilters()">
+                                    <option value="">全部资产</option>
+                                    <option value="BTC-USDT">BTC-USDT</option>
+                                    <option value="ETH-USDT">ETH-USDT</option>
+                                    <option value="AAPL">AAPL</option>
+                                    <option value="GOOGL">GOOGL</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>订单ID</th>
+                                        <th>资产</th>
+                                        <th>方向</th>
+                                        <th>类型</th>
+                                        <th>数量</th>
+                                        <th>已成交</th>
+                                        <th>价格</th>
+                                        <th>状态</th>
+                                        <th>时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTable">
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">加载中...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fills Panel -->
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-exchange-alt me-2"></i>成交记录
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>订单ID</th>
+                                        <th>资产</th>
+                                        <th>方向</th>
+                                        <th>数量</th>
+                                        <th>成交价</th>
+                                        <th>成交额</th>
+                                        <th>费用</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fillsTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">
+                                            暂无成交记录
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+            loadFills();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Update preview when inputs change
+            document.getElementById('orderSymbol').addEventListener('change', updatePreview);
+            document.getElementById('orderSide').addEventListener('change', updatePreview);
+            document.getElementById('orderType').addEventListener('change', updateOrderTypeFields);
+            document.getElementById('orderQuantity').addEventListener('input', updatePreview);
+            document.getElementById('orderLimitPrice').addEventListener('input', updatePreview);
+            document.getElementById('orderStopPrice').addEventListener('input', updatePreview);
+
+            // Set initial preview
+            updatePreview();
+        }
+
+        function updateOrderTypeFields() {
+            const orderType = document.getElementById('orderType').value;
+            const limitGroup = document.getElementById('limitPriceGroup');
+            const stopGroup = document.getElementById('stopPriceGroup');
+
+            // Hide both initially
+            limitGroup.classList.add('d-none');
+            stopGroup.classList.add('d-none');
+
+            // Show appropriate fields based on order type
+            if (orderType === 'limit' || orderType === 'stop_limit') {
+                limitGroup.classList.remove('d-none');
+            }
+            if (orderType === 'stop' || orderType === 'stop_limit') {
+                stopGroup.classList.remove('d-none');
+            }
+        }
+
+        function updatePreview() {
+            const symbol = document.getElementById('orderSymbol').value;
+            const side = document.getElementById('orderSide').value;
+            const type = document.getElementById('orderType').value;
+            const quantity = parseFloat(document.getElementById('orderQuantity').value) || 0;
+            const limitPrice = parseFloat(document.getElementById('orderLimitPrice').value) || 0;
+            const stopPrice = parseFloat(document.getElementById('orderStopPrice').value) || 0;
+
+            // Update preview elements
+            document.getElementById('previewSymbol').textContent = symbol;
+            
+            const sideElement = document.getElementById('previewSide');
+            sideElement.textContent = side === 'buy' ? '买入' : '卖出';
+            sideElement.className = `fw-bold ${side === 'buy' ? 'text-success' : 'text-danger'}`;
+            
+            document.getElementById('previewType').textContent = 
+                type === 'market' ? '市价单' :
+                type === 'limit' ? '限价单' :
+                type === 'stop' ? '止损单' : '止损限价单';
+
+            document.getElementById('previewQuantity').textContent = quantity.toFixed(4);
+
+            // Calculate estimated amount
+            let price = 0;
+            if (type === 'limit') {
+                price = limitPrice;
+            } else if (type === 'market') {
+                // Mock market price
+                price = 43000 + Math.random() * 1000;
+            } else if (type === 'stop' || type === 'stop_limit') {
+                price = stopPrice;
+            }
+
+            const amount = quantity * price;
+            const fee = amount * 0.001; // 0.1% fee
+
+            document.getElementById('previewAmount').textContent = `$${amount.toFixed(2)}`;
+            document.getElementById('previewFee').textContent = `$${fee.toFixed(2)}`;
+        }
+
+        function placeOrder() {
+            const symbol = document.getElementById('orderSymbol').value;
+            const side = document.getElementById('orderSide').value;
+            const type = document.getElementById('orderType').value;
+            const quantity = parseFloat(document.getElementById('orderQuantity').value);
+            const limitPrice = parseFloat(document.getElementById('orderLimitPrice').value) || null;
+            const stopPrice = parseFloat(document.getElementById('orderStopPrice').value) || null;
+            const strategy = document.getElementById('executionStrategy').value;
+            const tif = document.getElementById('timeInForce').value;
+
+            if (!quantity || quantity <= 0) {
+                alert('请输入有效的数量');
+                return;
+            }
+
+            // Validate required fields based on order type
+            if (type === 'limit' && (!limitPrice || limitPrice <= 0)) {
+                alert('请设置有效的限价');
+                return;
+            }
+            if ((type === 'stop' || type === 'stop_limit') && (!stopPrice || stopPrice <= 0)) {
+                alert('请设置有效的触发价');
+                return;
+            }
+
+            // Mock order placement
+            alert(`${side === 'buy' ? '买入' : '卖出'} ${quantity} ${symbol} 订单已提交！`);
+
+            // In a real system, this would call the API to place the order
+            // For now, just reload orders
+            setTimeout(() => {
+                loadOrders();
+                document.getElementById('orderQuantity').value = '';
+                document.getElementById('orderLimitPrice').value = '';
+                document.getElementById('orderStopPrice').value = '';
+                updatePreview();
+            }, 100);
+        }
+
+        function loadOrders() {
+            // Mock order data for demonstration
+            const orders = [
+                {
+                    id: 'ORDER_001',
+                    symbol: 'BTC-USDT',
+                    side: 'buy',
+                    type: 'market',
+                    quantity: 0.5,
+                    filled: 0.5,
+                    price: 43250.00,
+                    status: 'filled',
+                    timestamp: '2023-12-20 14:30:15'
+                },
+                {
+                    id: 'ORDER_002',
+                    symbol: 'ETH-USDT',
+                    side: 'sell',
+                    type: 'limit',
+                    quantity: 2.0,
+                    filled: 1.0,
+                    price: 2800.00,
+                    status: 'partially_filled',
+                    timestamp: '2023-12-20 13:45:30'
+                },
+                {
+                    id: 'ORDER_003',
+                    symbol: 'AAPL',
+                    side: 'buy',
+                    type: 'market',
+                    quantity: 10,
+                    filled: 0,
+                    price: 185.50,
+                    status: 'new',
+                    timestamp: '2023-12-20 12:20:10'
+                }
+            ];
+
+            const tbody = document.getElementById('ordersTable');
+            tbody.innerHTML = '';
+
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.id}</td>
+                    <td>${order.symbol}</td>
+                    <td>
+                        <span class="${order.side === 'buy' ? 'text-success' : 'text-danger'}">
+                            ${order.side === 'buy' ? '买入' : '卖出'}
+                        </span>
+                    </td>
+                    <td>${order.type === 'market' ? '市价' : '限价'}</td>
+                    <td>${order.quantity.toFixed(4)}</td>
+                    <td>${order.filled.toFixed(4)}</td>
+                    <td>$${order.price.toFixed(2)}</td>
+                    <td>
+                        <span class="badge bg-${getStatusBadgeClass(order.status)}">
+                            ${getStatusText(order.status)}
+                        </span>
+                    </td>
+                    <td>${order.timestamp}</td>
+                    <td>
+                        ${order.status === 'new' || order.status === 'partially_filled' ?
+                            `<button class="btn btn-sm btn-outline-danger" onclick="cancelOrder('${order.id}')">
+                                <i class="fas fa-times"></i>
+                            </button>` :
+                            ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadFills() {
+            // Mock fill data for demonstration
+            const fills = [
+                {
+                    orderId: 'ORDER_001',
+                    symbol: 'BTC-USDT',
+                    side: 'buy',
+                    quantity: 0.5,
+                    price: 43250.00,
+                    amount: 21625.00,
+                    fee: 21.63,
+                    timestamp: '2023-12-20 14:30:16'
+                },
+                {
+                    orderId: 'ORDER_002',
+                    symbol: 'ETH-USDT',
+                    side: 'sell',
+                    quantity: 1.0,
+                    price: 2795.50,
+                    amount: 2795.50,
+                    fee: 2.80,
+                    timestamp: '2023-12-20 13:45:32'
+                }
+            ];
+
+            const tbody = document.getElementById('fillsTable');
+            tbody.innerHTML = '';
+
+            fills.forEach(fill => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${fill.orderId}</td>
+                    <td>${fill.symbol}</td>
+                    <td>
+                        <span class="${fill.side === 'buy' ? 'text-success' : 'text-danger'}">
+                            ${fill.side === 'buy' ? '买入' : '卖出'}
+                        </span>
+                    </td>
+                    <td>${fill.quantity.toFixed(4)}</td>
+                    <td>$${fill.price.toFixed(2)}</td>
+                    <td>$${fill.amount.toFixed(2)}</td>
+                    <td>$${fill.fee.toFixed(2)}</td>
+                    <td>${fill.timestamp}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'filled': return 'success';
+                case 'partially_filled': return 'warning';
+                case 'new': return 'primary';
+                case 'cancelled': return 'secondary';
+                case 'rejected': return 'danger';
+                default: return 'light';
+            }
+        }
+
+        function getStatusText(status) {
+            switch(status) {
+                case 'filled': return '已成交';
+                case 'partially_filled': return '部分成交';
+                case 'new': return '新建';
+                case 'cancelled': return '已取消';
+                case 'rejected': return '已拒绝';
+                default: return status;
+            }
+        }
+
+        function cancelOrder(orderId) {
+            if (confirm(`确定要取消订单 ${orderId} 吗？`)) {
+                alert(`订单 ${orderId} 已取消`);
+                loadOrders(); // Refresh orders
+            }
+        }
+
+        function refreshOrders() {
+            loadOrders();
+            loadFills();
+        }
+
+        function filterOrders() {
+            // In a real system, this would open a filter modal
+            alert('打开筛选条件...');
+        }
+
+        function applyFilters() {
+            // Apply filters based on select values
+            const statusFilter = document.getElementById('statusFilter').value;
+            const symbolFilter = document.getElementById('symbolFilter').value;
+            
+            console.log('Applying filters:', {status: statusFilter, symbol: symbolFilter});
+            loadOrders(); // Reload with filters applied
+        }
+    </script>
+</body>
+</html>

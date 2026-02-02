@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>风控系统 - 量化交易平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>量化交易平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/strategies">
+                            <i class="fas fa-brain me-1"></i> 策略管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtest">
+                            <i class="fas fa-vial me-1"></i> 回测分析
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/risk">
+                            <i class="fas fa-shield-alt me-1"></i> 风控系统
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/orders">
+                            <i class="fas fa-exchange-alt me-1"></i> 订单管理
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Risk Overview -->
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fas fa-exclamation-triangle me-2"></i>风险总览
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>风险比例</h6>
+                                    <div id="riskPercent" class="h4 text-danger">0.00%</div>
+                                    <div class="progress mt-2">
+                                        <div id="riskProgress" class="progress-bar bg-danger" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>敞口比例</h6>
+                                    <div id="exposurePercent" class="h4 text-warning">0.00%</div>
+                                    <div class="progress mt-2">
+                                        <div id="exposureProgress" class="progress-bar bg-warning" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>最大回撤</h6>
+                                    <div id="maxDrawdown" class="h4 text-info">0.00%</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h6>24h告警</h6>
+                                    <div id="alertCount" class="h4 text-primary">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Chart -->
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-chart-line me-2"></i>风险监控</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshRiskData()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="setRiskThresholds()">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="riskChart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Current Positions -->
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-wallet me-2"></i>当前仓位
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>资产</th>
+                                        <th>数量</th>
+                                        <th>入场价</th>
+                                        <th>当前价</th>
+                                        <th>盈亏</th>
+                                        <th>止损</th>
+                                        <th>止盈</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="positionsTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">
+                                            暂无持仓
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Controls -->
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-sliders-h me-2"></i>风险阈值设置
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">最大仓位比例 (%)</label>
+                            <input type="number" class="form-control" id="maxPositionSize" value="20" min="1" max="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">最大单笔风险 (%)</label>
+                            <input type="number" class="form-control" id="maxRiskPerTrade" value="2" min="0.1" max="10">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">最大日亏损 ($)</label>
+                            <input type="number" class="form-control" id="maxDailyLoss" value="5000" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">最大回撤 (%)</label>
+                            <input type="number" class="form-control" id="maxDrawdownThreshold" value="15" min="1" max="50">
+                        </div>
+                        <button class="btn btn-warning w-100" onclick="updateRiskSettings()">
+                            <i class="fas fa-save me-2"></i>保存设置
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-bell me-2"></i>实时告警
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group" id="alertsList">
+                            <div class="list-group-item list-group-item-light">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1"><i class="fas fa-check-circle text-success me-2"></i>系统正常</h6>
+                                    <small>刚刚</small>
+                                </div>
+                                <p class="mb-1 text-muted">所有风险指标在安全范围内</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-shield-alt me-2"></i>风险规则
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="maxPositionRule" checked>
+                            <label class="form-check-label" for="maxPositionRule">
+                                最大仓位限制
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="stopLossRule" checked>
+                            <label class="form-check-label" for="stopLossRule">
+                                止损规则
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="takeProfitRule" checked>
+                            <label class="form-check-label" for="takeProfitRule">
+                                止盈规则
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="dailyLossRule" checked>
+                            <label class="form-check-label" for="dailyLossRule">
+                                日亏损限制
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="drawdownRule" checked>
+                            <label class="form-check-label" for="drawdownRule">
+                                最大回撤限制
+                            </label>
+                        </div>
+                        <button class="btn btn-secondary w-100" onclick="applyRiskRules()">
+                            <i class="fas fa-sync-alt me-2"></i>应用规则
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let riskChart = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeRiskChart();
+            loadRiskData();
+        });
+
+        function initializeRiskChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [{
+                        label: '风险水平',
+                        data: Array.from({length: 24}, () => Math.random() * 10),
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }, {
+                        label: '安全阈值',
+                        data: Array(24).fill(15),
+                        borderColor: '#28a745',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 20
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadRiskData() {
+            // Mock data for demonstration
+            document.getElementById('riskPercent').textContent = '3.45%';
+            document.getElementById('riskProgress').style.width = '3.45%';
+            document.getElementById('exposurePercent').textContent = '12.34%';
+            document.getElementById('exposureProgress').style.width = '12.34%';
+            document.getElementById('maxDrawdown').textContent = '-1.23%';
+            document.getElementById('alertCount').textContent = '2';
+
+            // Update risk progress bar color based on level
+            const riskValue = 3.45;
+            if (riskValue > 15) {
+                document.getElementById('riskProgress').className = 'progress-bar bg-danger';
+            } else if (riskValue > 5) {
+                document.getElementById('riskProgress').className = 'progress-bar bg-warning';
+            } else {
+                document.getElementById('riskProgress').className = 'progress-bar bg-success';
+            }
+
+            // Update positions table
+            const positionsTable = document.getElementById('positionsTable');
+            positionsTable.innerHTML = `
+                <tr>
+                    <td>BTC-USDT</td>
+                    <td>0.5</td>
+                    <td>$42,500.00</td>
+                    <td>$43,200.00</td>
+                    <td class="text-success">+$350.00 (+1.65%)</td>
+                    <td>$41,000.00</td>
+                    <td>$45,000.00</td>
+                    <td><span class="badge bg-success">持有</span></td>
+                </tr>
+                <tr>
+                    <td>ETH-USDT</td>
+                    <td>2.0</td>
+                    <td>$2,800.00</td>
+                    <td>$2,750.00</td>
+                    <td class="text-danger">-$100.00 (-1.79%)</td>
+                    <td>$2,600.00</td>
+                    <td>$3,000.00</td>
+                    <td><span class="badge bg-warning">监控</span></td>
+                </tr>
+            `;
+
+            // Update alerts
+            const alertsList = document.getElementById('alertsList');
+            alertsList.innerHTML = `
+                <div class="list-group-item list-group-item-danger">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1"><i class="fas fa-exclamation-triangle text-danger me-2"></i>ETH价格预警</h6>
+                        <small>2分钟前</small>
+                    </div>
+                    <p class="mb-1">ETH价格接近止损位 $2,650.00</p>
+                </div>
+                <div class="list-group-item list-group-item-warning">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1"><i class="fas fa-exclamation-triangle text-warning me-2"></i>仓位过高</h6>
+                        <small>10分钟前</small>
+                    </div>
+                    <p class="mb-1">ETH仓位占总资产12%，接近阈值</p>
+                </div>
+                <div class="list-group-item list-group-item-success">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1"><i class="fas fa-check-circle text-success me-2"></i>系统正常</h6>
+                        <small>1小时前</small>
+                    </div>
+                    <p class="mb-1">所有风险指标在安全范围内</p>
+                </div>
+            `;
+        }
+
+        function refreshRiskData() {
+            loadRiskData();
+            // Simulate refreshing chart data
+            const newData = Array.from({length: 24}, () => Math.random() * 10);
+            riskChart.data.datasets[0].data = newData;
+            riskChart.update();
+        }
+
+        function updateRiskSettings() {
+            const maxPosition = document.getElementById('maxPositionSize').value;
+            const maxRisk = document.getElementById('maxRiskPerTrade').value;
+            const maxDaily = document.getElementById('maxDailyLoss').value;
+            const maxDrawdown = document.getElementById('maxDrawdownThreshold').value;
+
+            alert(`风险设置已更新:\n最大仓位: ${maxPosition}%\n单笔风险: ${maxRisk}%\n日亏损: $${maxDaily}\n最大回撤: ${maxDrawdown}%`);
+        }
+
+        function applyRiskRules() {
+            const rules = {
+                maxPosition: document.getElementById('maxPositionRule').checked,
+                stopLoss: document.getElementById('stopLossRule').checked,
+                takeProfit: document.getElementById('takeProfitRule').checked,
+                dailyLoss: document.getElementById('dailyLossRule').checked,
+                drawdown: document.getElementById('drawdownRule').checked
+            };
+
+            alert('风险规则已应用:\n' + 
+                `最大仓位限制: ${rules.maxPosition ? '开启' : '关闭'}\n` +
+                `止损规则: ${rules.stopLoss ? '开启' : '关闭'}\n` +
+                `止盈规则: ${rules.takeProfit ? '开启' : '关闭'}\n` +
+                `日亏损限制: ${rules.dailyLoss ? '开启' : '关闭'}\n` +
+                `最大回撤限制: ${rules.drawdown ? '开启' : '关闭'}`);
+
+            // In a real system, this would send the settings to the backend
+        }
+
+        function setRiskThresholds() {
+            alert('设置风险阈值...');
+        }
+    </script>
+</body>
+</html>
